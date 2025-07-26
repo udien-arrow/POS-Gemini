@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
+require_once 'database.php';
 
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -11,34 +12,28 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 header("Content-Type: application/json");
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method Not Allowed']);
-    exit;
-}
-
-$request_body = file_get_contents('php://input');
-$data = json_decode($request_body);
-$action = $data->action ?? null;
-
-if (!$action) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Action not specified']);
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit;
 }
 
 // --- Membaca Konfigurasi Toko ---
-$configFile = __DIR__ . '/config.json';
-$storeSettings = [
-    'store_name' => 'Toko Keren (PHP)',
-    'store_address' => 'Jl. Kode No. 123'
-];
-if (file_exists($configFile)) {
-    $settingsJson = file_get_contents($configFile);
-    $storeSettings = array_merge($storeSettings, json_decode($settingsJson, true));
-}
+$pdo = getDbConnection();
+$stmt = $pdo->query("SELECT key, value FROM settings");
+$storeSettings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+$storeSettings['store_name'] = $storeSettings['store_name'] ?? 'Toko Keren (PHP)';
+$storeSettings['store_address'] = $storeSettings['store_address'] ?? 'Jl. Kode No. 123';
 
 try {
+    $data = json_decode(file_get_contents('php://input'));
+    $action = $data->action ?? null;
+
+    if (!$action) {
+        throw new Exception("Action not specified.");
+    }
+
+    // Pindahkan koneksi printer ke dalam blok try agar tidak selalu dibuat
+    $connector = null;
+
     // Pengecekan izin tulis pada direktori saat ini
     if (!is_writable(__DIR__)) {
         throw new Exception("Server tidak memiliki izin untuk menulis file di direktori ini. Periksa izin folder untuk: " . __DIR__);
@@ -53,13 +48,11 @@ try {
     //
     // - Uji Coba (Cetak ke File): Menyimpan output printer ke file untuk dianalisis.
     //   File output akan bernama 'receipt.bin' di direktori yang sama.
-    $connector = new FilePrintConnector("receipt.bin");
+    // $connector = new FilePrintConnector("receipt.bin");
     //
     // - Network: Gunakan alamat IP dan port printer.
     // $connector = new NetworkPrintConnector("192.168.1.234", 9100);
     // =================================================================
-
-    $printer = new Printer($connector);
 
     switch ($action) {
         case 'print':
@@ -75,6 +68,9 @@ try {
             $paymentMethod = $data->payment_method ?? 'N/A';
             $amountPaid = $data->amount_paid ?? 0;
             $change = $data->change ?? 0;
+
+            $connector = new FilePrintConnector("receipt.bin"); // Inisialisasi konektor di sini
+            $printer = new Printer($connector);
 
             // --- Mulai mencetak ---
 
@@ -151,33 +147,53 @@ try {
 
             // --- Pencatatan Transaksi (Logging) ---
             try {
-                $logFile = __DIR__ . '/transactions.log';
-                $logEntry = [
-                    'transaction_id' => uniqid('trx_', true),
-                    'timestamp' => date('c'), // Format ISO 8601, cth: 2024-01-10T15:02:01+07:00
-                    'items' => $cart,
-                    'summary' => [
-                        'subtotal' => $subtotal,
-                        'tax' => $tax,
-                        'total' => $total,
-                        'transaction_discount' => $transactionDiscount,
-                        'payment_method' => $paymentMethod,
-                        'amount_paid' => $amountPaid,
-                        'change' => $change
-                    ]
-                ];
-                // Mengubah array menjadi string JSON dan menambahkannya ke file log.
-                // FILE_APPEND untuk menambahkan ke akhir file, LOCK_EX untuk mencegah penulisan ganda secara bersamaan.
-                file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND | LOCK_EX);
-            } catch (Exception $logException) {
+                $pdo->beginTransaction();
+
+                $sql = "INSERT INTO transactions (transaction_id, timestamp, subtotal, tax, transaction_discount, total, payment_method, amount_paid, change) 
+                        VALUES (:transaction_id, :timestamp, :subtotal, :tax, :transaction_discount, :total, :payment_method, :amount_paid, :change)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':transaction_id' => uniqid('trx_'),
+                    ':timestamp' => date('c'),
+                    ':subtotal' => $subtotal,
+                    ':tax' => $tax,
+                    ':transaction_discount' => $transactionDiscount,
+                    ':total' => $total,
+                    ':payment_method' => $paymentMethod,
+                    ':amount_paid' => $amountPaid,
+                    ':change' => $change
+                ]);
+
+                $transactionDbId = $pdo->lastInsertId();
+
+                $itemSql = "INSERT INTO transaction_items (transaction_id, product_id, product_name, quantity, price_at_sale, discount_per_item)
+                            VALUES (:transaction_id, :product_id, :product_name, :quantity, :price_at_sale, :discount_per_item)";
+                $itemStmt = $pdo->prepare($itemSql);
+
+                foreach ($cart as $item) {
+                    $itemStmt->execute([
+                        ':transaction_id' => $transactionDbId,
+                        ':product_id' => $item->id,
+                        ':product_name' => $item->name,
+                        ':quantity' => $item->quantity,
+                        ':price_at_sale' => $item->price,
+                        ':discount_per_item' => $item->discount ?? 0
+                    ]);
+                }
+
+                $pdo->commit();
+            } catch (Exception $dbException) {
+                $pdo->rollBack();
                 // Jika logging gagal, jangan hentikan proses utama. Cukup catat error di log PHP.
-                error_log("Gagal menyimpan log transaksi: " . $logException->getMessage());
+                error_log("Gagal menyimpan transaksi ke DB: " . $dbException->getMessage());
             }
 
             echo json_encode(['message' => 'Struk berhasil dicetak dengan detail pesanan!']);
             break;
 
         case 'open_drawer':
+            $connector = new FilePrintConnector("php://output"); // Use a dummy connector for non-printing actions
+            $printer = new Printer($connector);
             $printer->pulse(); // Perintah untuk membuka laci kasir
             $printer->close();
             echo json_encode(['message' => 'Perintah membuka laci terkirim!']);
@@ -190,5 +206,5 @@ try {
     }
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Gagal terhubung ke printer: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
 }

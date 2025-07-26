@@ -264,15 +264,18 @@
             const showModal = (trx) => {
                 document.getElementById('modal-id').textContent = trx.transaction_id;
                 document.getElementById('modal-time').textContent = new Date(trx.timestamp).toLocaleString('id-ID');
-                document.getElementById('modal-subtotal').textContent = formatCurrency(trx.summary.subtotal);
-                document.getElementById('modal-tax').textContent = formatCurrency(trx.summary.tax || 0);
-                document.getElementById('modal-total').textContent = formatCurrency(trx.summary.total);
+                // Data summary sekarang ada di level atas objek trx
+                document.getElementById('modal-subtotal').textContent = formatCurrency(trx.subtotal);
+                document.getElementById('modal-tax').textContent = formatCurrency(trx.tax || 0);
+                document.getElementById('modal-total').textContent = formatCurrency(trx.total);
 
                 const itemsList = document.getElementById('modal-items');
                 itemsList.innerHTML = '';
+                // trx.items sekarang berisi data dari tabel transaction_items
                 trx.items.forEach(item => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<span>${item.name} (x${item.quantity})</span> <span>${formatCurrency(item.price * item.quantity)}</span>`;
+                    const itemTotal = (item.price_at_sale - item.discount_per_item) * item.quantity;
+                    li.innerHTML = `<span>${item.product_name} (x${item.quantity})</span> <span>${formatCurrency(itemTotal)}</span>`;
                     itemsList.appendChild(li);
                 });
 
@@ -287,9 +290,9 @@
 
                 if (todayData) {
                     todaySummaryEl.innerHTML = `
-                        <p><span>Total Penjualan</span> <span>${formatCurrency(todayData.total_sales)}</span></p>
-                        <p><span>Total Pajak</span> <span>${formatCurrency(todayData.total_tax)}</span></p>
-                        <p><span>Jumlah Transaksi</span> <span>${todayData.transaction_count}</span></p>
+                        <p><span>Total Penjualan</span> <span>${formatCurrency(todayData.total_sales || 0)}</span></p>
+                        <p><span>Total Pajak</span> <span>${formatCurrency(todayData.total_tax || 0)}</span></p>
+                        <p><span>Jumlah Transaksi</span> <span>${todayData.transaction_count || 0}</span></p>
                     `;
                 } else {
                     todaySummaryEl.innerHTML = '<p>Belum ada transaksi hari ini.</p>';
@@ -316,7 +319,7 @@
                         row.innerHTML = `
                             <td data-label="ID Transaksi">${trx.transaction_id}</td>
                             <td data-label="Waktu">${new Date(trx.timestamp).toLocaleString('id-ID')}</td>
-                            <td data-label="Total">${formatCurrency(trx.summary.total)}</td>
+                            <td data-label="Total">${formatCurrency(trx
                             <td data-label="Aksi">
                                 <button class="btn-detail" data-index="${index}">
                                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.18l.879-1.54.879-1.54A1.65 1.65 0 015.33 5.12l1.54-.879 1.54-.879a1.65 1.65 0 011.18 0l1.54.879 1.54.879a1.65 1.65 0 011.789 1.789l.879 1.54.879 1.54a1.65 1.65 0 010 1.18l-.879 1.54-.879 1.54a1.65 1.65 0 01-1.789 1.789l-1.54.879-1.54.879a1.65 1.65 0 01-1.18 0l-1.54-.879-1.54-.879a1.65 1.65 0 01-1.789-1.789l-.879-1.54-.879-1.54zM10 15a5 5 0 100-10 5 5 0 000 10z" clip-rule="evenodd" /></svg>
