@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Transaksi</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #dce1e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--secondary-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+        .summary-container {
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+        }
+        .summary-container h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        .summary-box p {
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+        .summary-box p strong { font-weight: 600; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        th { background-color: var(--secondary-color); }
+        td { vertical-align: middle; }
+        .btn-detail {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-detail:hover { background-color: #357ebd; }
+        .nav-links { text-align: center; margin-top: 20px; }
+        .nav-links a { margin: 0 10px; color: var(--primary-color); text-decoration: none; }
+        #status { text-align: center; margin-top: 20px; font-style: italic; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover { color: black; }
+        #modal-items { list-style-position: inside; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Riwayat Transaksi</h1>
+        <div class="summary-container">
+            <h2>Ringkasan Hari Ini</h2>
+            <div id="today-summary" class="summary-box">
+                <p>Memuat ringkasan...</p>
+            </div>
+        </div>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>ID Transaksi</th>
+                    <th>Waktu</th>
+                    <th>Total</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+        </table>
+        <div id="status">Memuat riwayat...</div>
+        <div class="nav-links">
+            <a href="index.html">&larr; Kembali ke POS</a>
+            <a href="settings.html">Pengaturan Toko &rarr;</a>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modal-title">Detail Transaksi</h2>
+            <p><strong>ID:</strong> <span id="modal-id"></span></p>
+            <p><strong>Waktu:</strong> <span id="modal-time"></span></p>
+            <h4>Item:</h4>
+            <ul id="modal-items"></ul>
+            <hr>
+            <p><strong>Subtotal:</strong> <span id="modal-subtotal"></span></p>
+            <p><strong>PPN:</strong> <span id="modal-tax"></span></p>
+            <p><strong>Total:</strong> <span id="modal-total"></span></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_URL = 'history.php';
+            const tableBody = document.getElementById('history-tbody');
+            const statusEl = document.getElementById('status');
+            let transactions = [];
+
+            // Modal elements
+            const modal = document.getElementById('detail-modal');
+            const closeModalBtn = document.querySelector('.close-button');
+
+            const formatCurrency = (amount) => `Rp ${parseInt(amount).toLocaleString('id-ID')}`;
+
+            const showModal = (trx) => {
+                document.getElementById('modal-id').textContent = trx.transaction_id;
+                document.getElementById('modal-time').textContent = new Date(trx.timestamp).toLocaleString('id-ID');
+                document.getElementById('modal-subtotal').textContent = formatCurrency(trx.summary.subtotal);
+                document.getElementById('modal-tax').textContent = formatCurrency(trx.summary.tax);
+                document.getElementById('modal-total').textContent = formatCurrency(trx.summary.total);
+
+                const itemsList = document.getElementById('modal-items');
+                itemsList.innerHTML = '';
+                trx.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.name} (x${item.quantity}) - ${formatCurrency(item.price * item.quantity)}`;
+                    itemsList.appendChild(li);
+                });
+
+                modal.style.display = 'block';
+            };
+
+            const renderSummary = (summaries) => {
+                const todaySummaryEl = document.getElementById('today-summary');
+                // Buat tanggal hari ini dalam format YYYY-MM-DD
+                const todayKey = new Date().toLocaleDateString('sv-SE');
+                const todayData = summaries[todayKey];
+
+                if (todayData) {
+                    todaySummaryEl.innerHTML = `
+                        <p><strong>Total Penjualan:</strong> ${formatCurrency(todayData.total_sales)}</p>
+                        <p><strong>Total Pajak:</strong> ${formatCurrency(todayData.total_tax)}</p>
+                        <p><strong>Jumlah Transaksi:</strong> ${todayData.transaction_count}</p>
+                    `;
+                } else {
+                    todaySummaryEl.innerHTML = '<p>Belum ada transaksi hari ini.</p>';
+                }
+            };
+
+            const loadHistory = async () => {
+                try {
+                    const response = await fetch(API_URL);
+                    if (!response.ok) throw new Error('Gagal mengambil data riwayat.');
+                    const data = await response.json();
+                    transactions = data.transactions;
+
+                    renderSummary(data.summaries);
+                    
+                    tableBody.innerHTML = '';
+                    if (transactions.length === 0) {
+                        statusEl.textContent = 'Belum ada riwayat transaksi.';
+                        return;
+                    }
+
+                    transactions.forEach((trx, index) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${trx.transaction_id}</td>
+                            <td>${new Date(trx.timestamp).toLocaleString('id-ID')}</td>
+                            <td>${formatCurrency(trx.summary.total)}</td>
+                            <td><button class="btn-detail" data-index="${index}">Lihat Detail</button></td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    statusEl.textContent = `Menampilkan ${transactions.length} transaksi.`;
+                } catch (error) {
+                    statusEl.textContent = `Error: ${error.message}`;
+                    statusEl.style.color = 'red';
+                }
+            };
+
+            // Event Listeners
+            tableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-detail')) {
+                    const index = e.target.dataset.index;
+                    showModal(transactions[index]);
+                }
+            });
+
+            closeModalBtn.onclick = () => modal.style.display = "none";
+            window.onclick = (event) => {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            };
+
+            loadHistory();
+        });
+    </script>
+</body>
+</html>

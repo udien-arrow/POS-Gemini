@@ -1,0 +1,2 @@
+{"transaction_id":"trx_6884b6bf43e558.84527399","timestamp":"2025-07-26T13:06:39+02:00","items":[{"id":1,"name":"Kopi Susu","price":18000,"quantity":1},{"id":2,"name":"Americano","price":15000,"quantity":1}],"summary":{"subtotal":33000,"tax":3630,"total":36630}}
+{"transaction_id":"trx_6884b739f41616.93064627","timestamp":"2025-07-26T13:08:41+02:00","items":[{"id":4,"name":"Teh Lemon","price":12000,"quantity":1},{"id":3,"name":"Croissant","price":22000,"quantity":1},{"id":6,"name":"Donat Coklat","price":8000,"quantity":1}],"summary":{"subtotal":42000,"tax":0,"total":42000}}

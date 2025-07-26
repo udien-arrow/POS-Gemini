@@ -1,0 +1,32 @@
+[
+    {
+        "id": 1,
+        "name": "Kopi Susu",
+        "price": 18000
+    },
+    {
+        "id": 2,
+        "name": "Americano",
+        "price": 15000
+    },
+    {
+        "id": 3,
+        "name": "Croissant",
+        "price": 22000
+    },
+    {
+        "id": 4,
+        "name": "Teh Lemon",
+        "price": 12000
+    },
+    {
+        "id": 5,
+        "name": "Air Mineral",
+        "price": 5000
+    },
+    {
+        "id": 6,
+        "name": "Donat Coklat",
+        "price": 8000
+    }
+]

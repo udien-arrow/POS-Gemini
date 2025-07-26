@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Produk</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #dce1e6;
+            --success-color: #5cb85c;
+            --danger-color: #d9534f;
+            --warning-color: #f0ad4e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--secondary-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+        .management-layout {
+            display: flex;
+            gap: 30px;
+        }
+        .product-list-section { flex: 2; }
+        .product-form-section { flex: 1; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        th { background-color: var(--secondary-color); }
+        .actions-cell button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .btn-submit { background-color: var(--success-color); width: 100%; }
+        .btn-submit:hover { background-color: #4cae4c; }
+        .btn-edit { background-color: var(--warning-color); }
+        .btn-edit:hover { background-color: #ec971f; }
+        .btn-delete { background-color: var(--danger-color); }
+        .btn-delete:hover { background-color: #c9302c; }
+        .btn-cancel { background-color: #777; }
+        .btn-cancel:hover { background-color: #666; }
+
+        #status { margin-top: 15px; font-style: italic; text-align: center; }
+        .nav-links { text-align: center; margin-top: 20px; }
+        .nav-links a { margin: 0 10px; color: var(--primary-color); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kelola Produk</h1>
+        <div class="management-layout">
+            <section class="product-list-section">
+                <h2>Daftar Produk</h2>
+                <table id="products-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nama</th>
+                            <th>Harga</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-tbody">
+                        <!-- Data produk akan dimuat di sini -->
+                    </tbody>
+                </table>
+            </section>
+            <section class="product-form-section">
+                <h2 id="form-title">Tambah Produk Baru</h2>
+                <form id="product-form">
+                    <input type="hidden" id="product-id" name="id">
+                    <div class="form-group">
+                        <label for="product-name">Nama Produk</label>
+                        <input type="text" id="product-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-price">Harga</label>
+                        <input type="number" id="product-price" name="price" required min="0">
+                    </div>
+                    <button type="submit" class="btn-submit" id="submit-button">Tambah</button>
+                    <button type="button" class="btn-cancel" id="cancel-button" style="display:none; width: 100%; margin-top: 10px;">Batal</button>
+                </form>
+                <div id="status"></div>
+            </section>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">&larr; Kembali ke POS</a>
+            <a href="settings.html">Pengaturan Toko &rarr;</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_URL = 'products.php';
+            const tableBody = document.getElementById('products-tbody');
+            const form = document.getElementById('product-form');
+            const formTitle = document.getElementById('form-title');
+            const submitButton = document.getElementById('submit-button');
+            const cancelButton = document.getElementById('cancel-button');
+            const statusEl = document.getElementById('status');
+            const productIdInput = document.getElementById('product-id');
+            const productNameInput = document.getElementById('product-name');
+            const productPriceInput = document.getElementById('product-price');
+
+            const formatCurrency = (amount) => `Rp ${parseInt(amount).toLocaleString('id-ID')}`;
+
+            const loadProducts = async () => {
+                try {
+                    const response = await fetch(API_URL);
+                    const products = await response.json();
+                    tableBody.innerHTML = '';
+                    products.forEach(p => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${p.id}</td>
+                            <td>${p.name}</td>
+                            <td>${formatCurrency(p.price)}</td>
+                            <td class="actions-cell">
+                                <button class="btn-edit" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}">Ubah</button>
+                                <button class="btn-delete" data-id="${p.id}">Hapus</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } catch (error) {
+                    statusEl.textContent = 'Gagal memuat produk.';
+                }
+            };
+
+            const resetForm = () => {
+                form.reset();
+                productIdInput.value = '';
+                formTitle.textContent = 'Tambah Produk Baru';
+                submitButton.textContent = 'Tambah';
+                cancelButton.style.display = 'none';
+            };
+
+            const sendRequest = async (data) => {
+                statusEl.textContent = 'Menyimpan...';
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Terjadi kesalahan');
+                    statusEl.textContent = result.message;
+                    loadProducts();
+                    resetForm();
+                } catch (error) {
+                    statusEl.textContent = `Error: ${error.message}`;
+                }
+            };
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = productIdInput.value;
+                const name = productNameInput.value;
+                const price = productPriceInput.value;
+                
+                const data = {
+                    action: id ? 'update' : 'create',
+                    id: parseInt(id) || null,
+                    name: name,
+                    price: parseInt(price)
+                };
+                sendRequest(data);
+            });
+
+            tableBody.addEventListener('click', (e) => {
+                const target = e.target;
+                const id = target.dataset.id;
+
+                if (target.classList.contains('btn-edit')) {
+                    // Isi form untuk mode ubah
+                    productIdInput.value = id;
+                    productNameInput.value = target.dataset.name;
+                    productPriceInput.value = target.dataset.price;
+                    formTitle.textContent = 'Ubah Produk';
+                    submitButton.textContent = 'Simpan Perubahan';
+                    cancelButton.style.display = 'block';
+                    // Scroll ke atas agar form terlihat
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+
+                if (target.classList.contains('btn-delete')) {
+                    if (confirm(`Apakah Anda yakin ingin menghapus produk dengan ID ${id}?`)) {
+                        sendRequest({ action: 'delete', id: parseInt(id) });
+                    }
+                }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                resetForm();
+            });
+
+            // Inisialisasi: Muat produk saat halaman dibuka
+            loadProducts();
+        });
+    </script>
+</body>
+</html>
