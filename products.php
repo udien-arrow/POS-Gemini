@@ -37,20 +37,42 @@ try {
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Data JSON tidak valid.");
-        }
-
-        $action = $input['action'] ?? null;
+        // Karena kita mengirim file, data tidak lagi dalam format JSON, tapi multipart/form-data
+        $action = $_POST['action'] ?? null;
         $products = getProducts($productsFile);
+        $imagePath = null;
+
+        // Handle file upload
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/uploads/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            $fileType = mime_content_type($_FILES['image']['tmp_name']);
+            if (!in_array($fileType, $allowedTypes)) {
+                throw new Exception("Tipe file tidak valid. Hanya JPG, PNG, GIF yang diizinkan.");
+            }
+
+            $fileName = uniqid() . '-' . basename($_FILES['image']['name']);
+            $targetFile = $uploadDir . $fileName;
+
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                $imagePath = 'uploads/' . $fileName;
+            } else {
+                throw new Exception("Gagal mengunggah file gambar.");
+            }
+        }
 
         switch ($action) {
             case 'create':
                 $newProduct = [
                     'id' => empty($products) ? 1 : max(array_column($products, 'id')) + 1,
-                    'name' => $input['name'] ?? '',
-                    'price' => (int)($input['price'] ?? 0)
+                    'name' => $_POST['name'] ?? '',
+                    'price' => (int)($_POST['price'] ?? 0),
+                    'image' => $imagePath ?? 'uploads/default.png', // Gunakan gambar baru atau default
+                    'category' => $_POST['category'] ?? 'Lainnya'
                 ];
                 if (empty($newProduct['name']) || $newProduct['price'] <= 0) {
                     throw new Exception("Nama dan harga produk harus diisi dengan benar.");
@@ -61,14 +83,18 @@ try {
                 break;
 
             case 'update':
-                $idToUpdate = (int)($input['id'] ?? 0);
+                $idToUpdate = (int)($_POST['id'] ?? 0);
                 if ($idToUpdate <= 0) throw new Exception("ID produk tidak valid untuk diupdate.");
                 
                 $updated = false;
                 foreach ($products as &$product) {
                     if ($product['id'] === $idToUpdate) {
-                        $product['name'] = $input['name'] ?? $product['name'];
-                        $product['price'] = (int)($input['price'] ?? $product['price']);
+                        $product['name'] = $_POST['name'] ?? $product['name'];
+                        $product['price'] = (int)($_POST['price'] ?? $product['price']);
+                        $product['category'] = $_POST['category'] ?? $product['category'];
+                        if ($imagePath !== null) {
+                            $product['image'] = $imagePath;
+                        }
                         $updated = true;
                         break;
                     }
@@ -80,7 +106,7 @@ try {
                 break;
 
             case 'delete':
-                $idToDelete = (int)($input['id'] ?? 0);
+                $idToDelete = (int)($_POST['id'] ?? 0);
                 if ($idToDelete <= 0) throw new Exception("ID produk tidak valid untuk dihapus.");
 
                 $initialCount = count($products);

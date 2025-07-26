@@ -71,6 +71,10 @@ try {
             
             // Ambil status PPN dari data yang dikirim, default ke false jika tidak ada
             $taxEnabled = $data->tax_enabled ?? false;
+            $transactionDiscount = $data->transaction_discount ?? 0;
+            $paymentMethod = $data->payment_method ?? 'N/A';
+            $amountPaid = $data->amount_paid ?? 0;
+            $change = $data->change ?? 0;
 
             // --- Mulai mencetak ---
 
@@ -86,10 +90,18 @@ try {
             $subtotal = 0;
             foreach ($cart as $item) {
                 $itemName = $item->name;
+                $itemDiscount = $item->discount ?? 0;
                 $quantity = $item->quantity;
                 $price = $item->price;
-                $itemTotal = $quantity * $price;
+                $itemTotal = ($price - $itemDiscount) * $quantity;
                 $subtotal += $itemTotal;
+
+                // Cetak harga asli jika ada diskon
+                if ($itemDiscount > 0) {
+                    $printer->text(sprintf('%-32s', "$itemName x$quantity") . "\n");
+                    $printer->text(sprintf('%20s %12s', "  @ " . number_format($price) . " - " . number_format($itemDiscount), number_format($itemTotal)) . "\n");
+                    continue; // Lanjut ke item berikutnya
+                }
 
                 // Format baris: Nama item di kiri, total harga di kanan
                 // Asumsi lebar kertas 32 karakter
@@ -102,9 +114,14 @@ try {
             $printer->text("--------------------------------\n");
             // Hitung pajak hanya jika diaktifkan dari frontend
             $tax = $taxEnabled ? ($subtotal * 0.11) : 0;
-            $total = $subtotal + $tax;
+            $total = $subtotal - $transactionDiscount + $tax;
 
             $printer->text(sprintf('%-20s %12s', 'Subtotal', number_format($subtotal)) . "\n");
+            
+            if ($transactionDiscount > 0) {
+                $printer->text(sprintf('%-20s %12s', 'Diskon', '-' . number_format($transactionDiscount)) . "\n");
+            }
+
             // Hanya cetak baris PPN jika PPN diterapkan
             if ($taxEnabled) {
                 $printer->text(sprintf('%-20s %12s', 'PPN (11%)', number_format($tax)) . "\n");
@@ -113,6 +130,15 @@ try {
             $printer->setEmphasis(true);
             $printer->text(sprintf('%-20s %12s', 'TOTAL', number_format($total)) . "\n");
             $printer->setEmphasis(false);
+
+            // Detail Pembayaran
+            $printer->feed(1);
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text(sprintf('%-20s %12s', 'Metode Bayar:', $paymentMethod) . "\n");
+            if ($paymentMethod === 'Tunai') {
+                $printer->text(sprintf('%-20s %12s', 'Bayar:', number_format($amountPaid)) . "\n");
+                $printer->text(sprintf('%-20s %12s', 'Kembali:', number_format($change)) . "\n");
+            }
 
             // Footer Struk
             $printer->feed(2);
@@ -133,7 +159,11 @@ try {
                     'summary' => [
                         'subtotal' => $subtotal,
                         'tax' => $tax,
-                        'total' => $total
+                        'total' => $total,
+                        'transaction_discount' => $transactionDiscount,
+                        'payment_method' => $paymentMethod,
+                        'amount_paid' => $amountPaid,
+                        'change' => $change
                     ]
                 ];
                 // Mengubah array menjadi string JSON dan menambahkannya ke file log.

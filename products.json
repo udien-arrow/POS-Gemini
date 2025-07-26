@@ -2,31 +2,57 @@
     {
         "id": 1,
         "name": "Kopi Susu",
-        "price": 18000
+        "price": 18000,
+        "image": "uploads\/default.png",
+        "category": "Minuman"
     },
     {
         "id": 2,
         "name": "Americano",
-        "price": 15000
+        "price": 15000,
+        "image": "uploads\/default.png",
+        "category": "Minuman"
     },
     {
         "id": 3,
         "name": "Croissant",
-        "price": 22000
+        "price": 22000,
+        "image": "uploads\/default.png",
+        "category": "Makanan"
     },
     {
         "id": 4,
         "name": "Teh Lemon",
-        "price": 12000
+        "price": 12000,
+        "image": "uploads\/default.png",
+        "category": "Minuman"
     },
     {
         "id": 5,
         "name": "Air Mineral",
-        "price": 5000
+        "price": 5000,
+        "image": "uploads\/default.png",
+        "category": "Minuman"
     },
     {
         "id": 6,
         "name": "Donat Coklat",
-        "price": 8000
+        "price": 8000,
+        "image": "uploads\/default.png",
+        "category": "Makanan"
+    },
+    {
+        "id": 7,
+        "name": "Safety",
+        "price": 99000,
+        "image": "uploads\/6884ba3fed3f3-safety.jpg",
+        "category": "Lainnya"
+    },
+    {
+        "id": 8,
+        "name": "Ayam",
+        "price": 150000,
+        "image": "uploads\/6884ba6b7be52-240px-Gallus_gallus_domesticus_(Parque_Quevedo).001_-_Leon.jpg",
+        "category": "Makanan"
     }
 ]

@@ -91,6 +91,10 @@
         .nav-links { text-align: center; margin-top: 20px; }
         .nav-links a { margin: 0 10px; color: var(--primary-color); text-decoration: none; }
     </style>
+    <style>
+        .product-image-preview { max-width: 100px; max-height: 100px; margin-top: 10px; border-radius: 4px; }
+        .table-product-image { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -101,9 +105,11 @@
                 <table id="products-table">
                     <thead>
                         <tr>
+                            <th>Gambar</th>
                             <th>ID</th>
                             <th>Nama</th>
                             <th>Harga</th>
+                            <th>Kategori</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -124,9 +130,23 @@
                         <label for="product-price">Harga</label>
                         <input type="number" id="product-price" name="price" required min="0">
                     </div>
+                    <div class="form-group">
+                        <label for="product-category">Kategori</label>
+                        <select id="product-category" name="category" required>
+                            <option value="Minuman">Minuman</option>
+                            <option value="Makanan">Makanan</option>
+                            <option value="Snack">Snack</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-image">Gambar Produk</label>
+                        <input type="file" id="product-image" name="image" accept="image/*">
+                    </div>
                     <button type="submit" class="btn-submit" id="submit-button">Tambah</button>
                     <button type="button" class="btn-cancel" id="cancel-button" style="display:none; width: 100%; margin-top: 10px;">Batal</button>
                 </form>
+                <img id="image-preview" class="product-image-preview" style="display:none;">
                 <div id="status"></div>
             </section>
         </div>
@@ -148,6 +168,8 @@
             const productIdInput = document.getElementById('product-id');
             const productNameInput = document.getElementById('product-name');
             const productPriceInput = document.getElementById('product-price');
+            const productCategoryInput = document.getElementById('product-category');
+            const imagePreview = document.getElementById('image-preview');
 
             const formatCurrency = (amount) => `Rp ${parseInt(amount).toLocaleString('id-ID')}`;
 
@@ -159,11 +181,13 @@
                     products.forEach(p => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
+                            <td><img src="${p.image}" alt="${p.name}" class="table-product-image"></td>
                             <td>${p.id}</td>
                             <td>${p.name}</td>
                             <td>${formatCurrency(p.price)}</td>
+                            <td>${p.category || 'Lainnya'}</td>
                             <td class="actions-cell">
-                                <button class="btn-edit" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}">Ubah</button>
+                                <button class="btn-edit" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-image="${p.image}" data-category="${p.category || 'Lainnya'}">Ubah</button>
                                 <button class="btn-delete" data-id="${p.id}">Hapus</button>
                             </td>
                         `;
@@ -180,15 +204,17 @@
                 formTitle.textContent = 'Tambah Produk Baru';
                 submitButton.textContent = 'Tambah';
                 cancelButton.style.display = 'none';
+                imagePreview.style.display = 'none';
+                imagePreview.src = '';
             };
 
             const sendRequest = async (data) => {
                 statusEl.textContent = 'Menyimpan...';
                 try {
+                    // Menggunakan FormData karena ada file upload
                     const response = await fetch(API_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                        body: data // Tidak perlu set header 'Content-Type'
                     });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || 'Terjadi kesalahan');
@@ -202,17 +228,9 @@
 
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const id = productIdInput.value;
-                const name = productNameInput.value;
-                const price = productPriceInput.value;
-                
-                const data = {
-                    action: id ? 'update' : 'create',
-                    id: parseInt(id) || null,
-                    name: name,
-                    price: parseInt(price)
-                };
-                sendRequest(data);
+                const formData = new FormData(form);
+                formData.append('action', productIdInput.value ? 'update' : 'create');
+                sendRequest(formData);
             });
 
             tableBody.addEventListener('click', (e) => {
@@ -224,6 +242,9 @@
                     productIdInput.value = id;
                     productNameInput.value = target.dataset.name;
                     productPriceInput.value = target.dataset.price;
+                    productCategoryInput.value = target.dataset.category;
+                    imagePreview.src = target.dataset.image;
+                    imagePreview.style.display = 'block';
                     formTitle.textContent = 'Ubah Produk';
                     submitButton.textContent = 'Simpan Perubahan';
                     cancelButton.style.display = 'block';
@@ -232,8 +253,11 @@
                 }
 
                 if (target.classList.contains('btn-delete')) {
+                    const formData = new FormData();
+                    formData.append('action', 'delete');
+                    formData.append('id', parseInt(id));
                     if (confirm(`Apakah Anda yakin ingin menghapus produk dengan ID ${id}?`)) {
-                        sendRequest({ action: 'delete', id: parseInt(id) });
+                        sendRequest(formData);
                     }
                 }
             });

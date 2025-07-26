@@ -6,59 +6,81 @@
     <title>Riwayat Transaksi</title>
     <style>
         :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #f5f7fa;
-            --text-color: #333;
-            --border-color: #dce1e6;
+            --primary-color: #3B82F6; /* Blue-500 */
+            --primary-dark: #2563EB;  /* Blue-600 */
+            --bg-light: #F9FAFB;      /* Gray-50 */
+            --bg-secondary: #F3F4F6;  /* Gray-100 */
+            --card-bg: #ffffff;
+            --text-dark: #1F2937;     /* Gray-800 */
+            --text-light: #6B7280;    /* Gray-500 */
+            --border-color: #E5E7EB;  /* Gray-200 */
+            --shadow-color: rgba(0, 0, 0, 0.05);
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--secondary-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-light);
             margin: 0;
             padding: 20px;
-            color: var(--text-color);
+            color: var(--text-dark);
+            line-height: 1.6;
         }
         .container {
             max-width: 1000px;
             margin: 0 auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         h1 {
             text-align: center;
             color: var(--primary-color);
-            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5em;
         }
         .summary-container {
-            background-color: var(--secondary-color);
+            background-color: var(--card-bg);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 25px;
             border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
         }
         .summary-container h2 {
             margin-top: 0;
-            color: var(--primary-color);
+            color: var(--text-dark);
+            font-size: 1.25em;
         }
         .summary-box p {
             margin: 5px 0;
             font-size: 1.1em;
+            display: flex;
+            justify-content: space-between;
         }
-        .summary-box p strong { font-weight: 600; }
+        .summary-box p span:last-child { font-weight: 600; }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
         }
         th, td {
             padding: 12px 15px;
-            border: 1px solid var(--border-color);
             text-align: left;
+            border-bottom: 1px solid var(--border-color);
         }
-        th { background-color: var(--secondary-color); }
+        th { 
+            background-color: var(--bg-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+        }
         td { vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+
         .btn-detail {
             background-color: var(--primary-color);
             color: white;
@@ -66,52 +88,125 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5em;
+            transition: background-color 0.2s;
         }
-        .btn-detail:hover { background-color: #357ebd; }
+        .btn-detail:hover { background-color: var(--primary-dark); }
+
         .nav-links { text-align: center; margin-top: 20px; }
         .nav-links a { margin: 0 10px; color: var(--primary-color); text-decoration: none; }
+        .nav-links a:hover { text-decoration: underline; }
+
         #status { text-align: center; margin-top: 20px; font-style: italic; }
 
         /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 100;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
             background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .modal.show {
+            opacity: 1;
+            pointer-events: auto;
         }
         .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
+            background-color: var(--card-bg);
+            padding: 25px;
             width: 80%;
             max-width: 500px;
             border-radius: 8px;
             position: relative;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal.show .modal-content {
+            transform: scale(1);
         }
         .close-button {
-            color: #aaa;
+            color: var(--text-light);
             position: absolute;
             top: 10px;
             right: 20px;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
+            transition: color 0.2s;
         }
-        .close-button:hover { color: black; }
-        #modal-items { list-style-position: inside; }
+        .close-button:hover { color: var(--text-dark); }
+        #modal-items { list-style: none; padding: 0; }
+        #modal-items li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #modal-items li:last-child { border-bottom: none; }
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            fill: currentColor;
+        }
+
+        /* Responsive Table */
+        @media screen and (max-width: 768px) {
+            body { padding: 10px; }
+            table { border: 0; box-shadow: none; }
+            table thead { display: none; }
+            table tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                box-shadow: 0 2px 4px var(--shadow-color);
+            }
+            table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+            table td:last-child { border-bottom: 0; }
+            table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                text-align: left;
+                margin-right: 1rem;
+                color: var(--text-dark);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Riwayat Transaksi</h1>
+        <h1>
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>
+            Riwayat Transaksi
+        </h1>
         <div class="summary-container">
-            <h2>Ringkasan Hari Ini</h2>
+            <h2>
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zM4.5 6.75A1.25 1.25 0 015.75 8h8.5a1.25 1.25 0 011.25 1.25v5.5A1.25 1.25 0 0114.25 16h-8.5A1.25 1.25 0 014.5 14.75v-5.5z" clip-rule="evenodd" /></svg>
+                Ringkasan Hari Ini
+            </h2>
             <div id="today-summary" class="summary-box">
                 <p>Memuat ringkasan...</p>
             </div>
@@ -137,8 +232,11 @@
     <!-- Modal Structure -->
     <div id="detail-modal" class="modal">
         <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 id="modal-title">Detail Transaksi</h2>
+            <span class="close-button" title="Tutup">&times;</span>
+            <h2 id="modal-title">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.5 2.75a.75.75 0 00-1.5 0v14.5a.75.75 0 001.5 0v-4.5h1.25a.75.75 0 000-1.5H3.5v-1h1.25a.75.75 0 000-1.5H3.5v-1h1.25a.75.75 0 000-1.5H3.5v-1h1.25a.75.75 0 000-1.5H3.5v-1zM16.5 17.25a.75.75 0 001.5 0V2.75a.75.75 0 00-1.5 0v4.5h-1.25a.75.75 0 000 1.5h1.25v1h-1.25a.75.75 0 000 1.5h1.25v1h-1.25a.75.75 0 000 1.5h1.25v1h-1.25a.75.75 0 000 1.5h1.25v1zM9.25 2.75a.75.75 0 00-1.5 0v14.5a.75.75 0 001.5 0V2.75z" /></svg>
+                Detail Transaksi
+            </h2>
             <p><strong>ID:</strong> <span id="modal-id"></span></p>
             <p><strong>Waktu:</strong> <span id="modal-time"></span></p>
             <h4>Item:</h4>
@@ -167,18 +265,18 @@
                 document.getElementById('modal-id').textContent = trx.transaction_id;
                 document.getElementById('modal-time').textContent = new Date(trx.timestamp).toLocaleString('id-ID');
                 document.getElementById('modal-subtotal').textContent = formatCurrency(trx.summary.subtotal);
-                document.getElementById('modal-tax').textContent = formatCurrency(trx.summary.tax);
+                document.getElementById('modal-tax').textContent = formatCurrency(trx.summary.tax || 0);
                 document.getElementById('modal-total').textContent = formatCurrency(trx.summary.total);
 
                 const itemsList = document.getElementById('modal-items');
                 itemsList.innerHTML = '';
                 trx.items.forEach(item => {
                     const li = document.createElement('li');
-                    li.textContent = `${item.name} (x${item.quantity}) - ${formatCurrency(item.price * item.quantity)}`;
+                    li.innerHTML = `<span>${item.name} (x${item.quantity})</span> <span>${formatCurrency(item.price * item.quantity)}</span>`;
                     itemsList.appendChild(li);
                 });
 
-                modal.style.display = 'block';
+                modal.classList.add('show');
             };
 
             const renderSummary = (summaries) => {
@@ -189,9 +287,9 @@
 
                 if (todayData) {
                     todaySummaryEl.innerHTML = `
-                        <p><strong>Total Penjualan:</strong> ${formatCurrency(todayData.total_sales)}</p>
-                        <p><strong>Total Pajak:</strong> ${formatCurrency(todayData.total_tax)}</p>
-                        <p><strong>Jumlah Transaksi:</strong> ${todayData.transaction_count}</p>
+                        <p><span>Total Penjualan</span> <span>${formatCurrency(todayData.total_sales)}</span></p>
+                        <p><span>Total Pajak</span> <span>${formatCurrency(todayData.total_tax)}</span></p>
+                        <p><span>Jumlah Transaksi</span> <span>${todayData.transaction_count}</span></p>
                     `;
                 } else {
                     todaySummaryEl.innerHTML = '<p>Belum ada transaksi hari ini.</p>';
@@ -216,10 +314,15 @@
                     transactions.forEach((trx, index) => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>${trx.transaction_id}</td>
-                            <td>${new Date(trx.timestamp).toLocaleString('id-ID')}</td>
-                            <td>${formatCurrency(trx.summary.total)}</td>
-                            <td><button class="btn-detail" data-index="${index}">Lihat Detail</button></td>
+                            <td data-label="ID Transaksi">${trx.transaction_id}</td>
+                            <td data-label="Waktu">${new Date(trx.timestamp).toLocaleString('id-ID')}</td>
+                            <td data-label="Total">${formatCurrency(trx.summary.total)}</td>
+                            <td data-label="Aksi">
+                                <button class="btn-detail" data-index="${index}">
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.18l.879-1.54.879-1.54A1.65 1.65 0 015.33 5.12l1.54-.879 1.54-.879a1.65 1.65 0 011.18 0l1.54.879 1.54.879a1.65 1.65 0 011.789 1.789l.879 1.54.879 1.54a1.65 1.65 0 010 1.18l-.879 1.54-.879 1.54a1.65 1.65 0 01-1.789 1.789l-1.54.879-1.54.879a1.65 1.65 0 01-1.18 0l-1.54-.879-1.54-.879a1.65 1.65 0 01-1.789-1.789l-.879-1.54-.879-1.54zM10 15a5 5 0 100-10 5 5 0 000 10z" clip-rule="evenodd" /></svg>
+                                    Lihat Detail
+                                </button>
+                            </td>
                         `;
                         tableBody.appendChild(row);
                     });
@@ -238,10 +341,10 @@
                 }
             });
 
-            closeModalBtn.onclick = () => modal.style.display = "none";
+            closeModalBtn.onclick = () => modal.classList.remove('show');
             window.onclick = (event) => {
                 if (event.target == modal) {
-                    modal.style.display = "none";
+                    modal.classList.remove('show');
                 }
             };
 
